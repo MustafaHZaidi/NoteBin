@@ -449,7 +449,24 @@ container.addEventListener('touchmove', e => {
   e.preventDefault(); const t=e.changedTouches[0], rect=container.getBoundingClientRect();
   if (touchThrow) {
     swipeCurrent={x:t.clientX-rect.left,y:t.clientY-rect.top};
-    // no arrow on touch — swipe direction is intuitive enough
+    // Draw swipe trail on touch
+    const dx=swipeCurrent.x-swipeStart.x, dy=swipeCurrent.y-swipeStart.y, len=Math.hypot(dx,dy);
+    arrowCtx.clearRect(0,0,arrowCanvas.width,arrowCanvas.height);
+    if (len>8) {
+      arrowCtx.beginPath();
+      arrowCtx.moveTo(swipeStart.x, swipeStart.y);
+      arrowCtx.lineTo(swipeCurrent.x, swipeCurrent.y);
+      arrowCtx.strokeStyle='rgba(255,255,255,0.25)';
+      arrowCtx.lineWidth=3;
+      arrowCtx.lineCap='round';
+      arrowCtx.setLineDash([]);
+      arrowCtx.stroke();
+      // Dot at finger tip
+      arrowCtx.beginPath();
+      arrowCtx.arc(swipeCurrent.x, swipeCurrent.y, 6, 0, Math.PI*2);
+      arrowCtx.fillStyle='rgba(255,255,255,0.35)';
+      arrowCtx.fill();
+    }
   } else if (touchOrbit) {
     const dx=t.clientX-touchOrbitLast.x, dy=t.clientY-touchOrbitLast.y;
     camOrbit.theta=Math.max(-ORBIT_THETA_MAX,Math.min(ORBIT_THETA_MAX,camOrbit.theta-dx*0.007));
@@ -458,7 +475,22 @@ container.addEventListener('touchmove', e => {
   }
 },{passive:false});
 container.addEventListener('touchend', () => {
-  if (touchThrow) { touchThrow=false; swipeActive=false; arrowCtx.clearRect(0,0,arrowCanvas.width,arrowCanvas.height); throwFromSwipe(true); }
+  if (touchThrow) {
+    touchThrow=false; swipeActive=false;
+    throwFromSwipe(true);
+    // Fade out the trail
+    let opacity = 0.25;
+    const fadeOut = setInterval(() => {
+      opacity -= 0.04;
+      if (opacity <= 0) { arrowCtx.clearRect(0,0,arrowCanvas.width,arrowCanvas.height); clearInterval(fadeOut); return; }
+      const dx=swipeCurrent.x-swipeStart.x, dy=swipeCurrent.y-swipeStart.y;
+      arrowCtx.clearRect(0,0,arrowCanvas.width,arrowCanvas.height);
+      arrowCtx.beginPath(); arrowCtx.moveTo(swipeStart.x,swipeStart.y); arrowCtx.lineTo(swipeCurrent.x,swipeCurrent.y);
+      arrowCtx.strokeStyle=`rgba(255,255,255,${opacity})`; arrowCtx.lineWidth=3; arrowCtx.lineCap='round'; arrowCtx.stroke();
+      arrowCtx.beginPath(); arrowCtx.arc(swipeCurrent.x,swipeCurrent.y,6,0,Math.PI*2);
+      arrowCtx.fillStyle=`rgba(255,255,255,${opacity+0.1})`; arrowCtx.fill();
+    }, 16);
+  }
   touchOrbit=false; if (!touchThrow) orbitReturning=true;
 });
 
