@@ -378,7 +378,9 @@ arrowCanvas.style.cssText='position:absolute;inset:0;width:100%;height:100%;poin
 container.appendChild(arrowCanvas);
 const arrowCtx=arrowCanvas.getContext('2d');
 function resizeArrow() { arrowCanvas.width=container.offsetWidth; arrowCanvas.height=container.offsetHeight; }
-resizeArrow(); window.addEventListener('resize',resizeArrow);
+resizeArrow();
+window.addEventListener('resize', resizeArrow);
+window.addEventListener('orientationchange', () => setTimeout(resizeArrow, 300));
 
 function drawAimArrow() {
   arrowCtx.clearRect(0,0,arrowCanvas.width,arrowCanvas.height);
@@ -793,4 +795,7 @@ function animate() {
   if (ballOnFire||deadBouncing) updateFireParticles(dt);
   renderer.render(scene3d,camera);
 }
+// On mobile, start with desk hidden so 3D view fills screen
+if (window.innerWidth <= 600) document.getElementById('desk').classList.add('hidden');
+
 animate();
