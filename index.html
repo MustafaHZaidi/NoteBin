@@ -405,7 +405,7 @@ crumpleImg.onerror = () => {
 };
 
 // Put texture.jpg in the same folder as this HTML file
-crumpleImg.src = 'texture.jpg';
+crumpleImg.src = 'Texture.jpg';
 
 // ═══════════════════════════════════════════
 // DRAWING
@@ -623,24 +623,29 @@ const PIN_POSITIONS = [
 ];
 
 function makePinnedNote(dataURL, slot) {
-  // Remove old mesh in this slot if exists
   if (pinnedNotes[slot]) { scene3d.remove(pinnedNotes[slot]); pinnedNotes[slot] = null; }
 
   const img = new Image();
+  img.crossOrigin = 'anonymous';
+
+  img.onerror = (e) => console.error('Pinned note image failed to load', e);
+
   img.onload = () => {
-    // Composite drawing onto paper-coloured canvas
     const c = document.createElement('canvas'); c.width = 256; c.height = 256;
     const ctx = c.getContext('2d');
     ctx.fillStyle = '#ede8dc'; ctx.fillRect(0,0,256,256);
-    ctx.drawImage(img, 0, 0, 256, 256);
-    if (crumpleReady) {
-      ctx.globalCompositeOperation = 'multiply';
-      ctx.globalAlpha = 0.55;
-      ctx.drawImage(crumpleImg, 0, 0, 256, 256);
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.globalAlpha = 1;
+    try {
+      ctx.drawImage(img, 0, 0, 256, 256);
+      if (crumpleReady) {
+        ctx.globalCompositeOperation = 'multiply';
+        ctx.globalAlpha = 0.55;
+        ctx.drawImage(crumpleImg, 0, 0, 256, 256);
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = 1;
+      }
+    } catch(e) {
+      console.warn('Canvas tainted, skipping composite:', e);
     }
-    // Ruled lines
     ctx.strokeStyle = '#c8d4e8'; ctx.lineWidth = 0.5;
     for (let y = 28; y < 256; y += 22) {
       ctx.beginPath(); ctx.moveTo(8,y); ctx.lineTo(248,y); ctx.stroke();
@@ -654,15 +659,12 @@ function makePinnedNote(dataURL, slot) {
     });
     const mesh = new THREE.Mesh(geo, mat);
     const p = PIN_POSITIONS[slot];
-    // Slight random tilt — feels pinned not printed
     const tilt = (Math.random() - 0.5) * 0.18;
     mesh.position.set(p.x + (Math.random()-0.5)*0.3, p.y + (Math.random()-0.5)*0.2, -13.8);
     mesh.rotation.z = tilt;
-    mesh.castShadow = false;
     scene3d.add(mesh);
     pinnedNotes[slot] = mesh;
 
-    // Fade in
     let op = 0;
     const iv = setInterval(() => {
       op = Math.min(op + 0.04, 0.88);
@@ -670,13 +672,12 @@ function makePinnedNote(dataURL, slot) {
       if (op >= 0.88) clearInterval(iv);
     }, 16);
 
-    // Pin dot
     const pinGeo = new THREE.SphereGeometry(0.055, 8, 8);
     const pinMat = new THREE.MeshStandardMaterial({ color: 0xcc3322, roughness: 0.4, metalness: 0.5 });
     const pin = new THREE.Mesh(pinGeo, pinMat);
     pin.position.set(p.x + (Math.random()-0.5)*0.3, p.y + (Math.random()-0.5)*0.2 + 0.78, -13.74);
     scene3d.add(pin);
-    mesh.userData.pin = pin; // track for cleanup
+    mesh.userData.pin = pin;
   };
   img.src = dataURL;
 }
@@ -696,8 +697,8 @@ async function refreshPinnedNotes() {
   }
 }
 
-// Load on startup
-refreshPinnedNotes();
+// Wait for Firebase module to be ready before loading pinned notes
+setTimeout(refreshPinnedNotes, 1500);
 const STREAK_COUNT  = 10;
 const STREAK_SEGS   = 12; // points per curve — more = smoother swoosh
 const streaks       = [];
