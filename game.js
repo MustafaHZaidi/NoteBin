@@ -447,8 +447,10 @@ container.addEventListener('touchstart', e => {
 },{passive:false});
 container.addEventListener('touchmove', e => {
   e.preventDefault(); const t=e.changedTouches[0], rect=container.getBoundingClientRect();
-  if (touchThrow) { swipeCurrent={x:t.clientX-rect.left,y:t.clientY-rect.top}; drawAimArrow(); }
-  else if (touchOrbit) {
+  if (touchThrow) {
+    swipeCurrent={x:t.clientX-rect.left,y:t.clientY-rect.top};
+    // no arrow on touch — swipe direction is intuitive enough
+  } else if (touchOrbit) {
     const dx=t.clientX-touchOrbitLast.x, dy=t.clientY-touchOrbitLast.y;
     camOrbit.theta=Math.max(-ORBIT_THETA_MAX,Math.min(ORBIT_THETA_MAX,camOrbit.theta-dx*0.007));
     camOrbit.phi=Math.max(ORBIT_PHI_MIN,Math.min(ORBIT_PHI_MAX,camOrbit.phi+dy*0.007));
@@ -456,15 +458,19 @@ container.addEventListener('touchmove', e => {
   }
 },{passive:false});
 container.addEventListener('touchend', () => {
-  if (touchThrow) { touchThrow=false; swipeActive=false; arrowCtx.clearRect(0,0,arrowCanvas.width,arrowCanvas.height); throwFromSwipe(); }
+  if (touchThrow) { touchThrow=false; swipeActive=false; arrowCtx.clearRect(0,0,arrowCanvas.width,arrowCanvas.height); throwFromSwipe(true); }
   touchOrbit=false; if (!touchThrow) orbitReturning=true;
 });
 
-function throwFromSwipe() {
+function throwFromSwipe(fromTouch=false) {
   if (!ballMesh) return;
   const dx=swipeCurrent.x-swipeStart.x, dy=swipeCurrent.y-swipeStart.y, len=Math.hypot(dx,dy);
   if (len<10) { gameState='idle'; document.getElementById('throw-hint').style.opacity='1'; return; }
-  const power=Math.min(len/110,1), normX=-dx/len, normY=-dy/len;
+  const power=Math.min(len/110,1);
+  // Touch: swipe direction = throw direction
+  // Desktop: pull-back = opposite direction
+  const normX = fromTouch ? dx/len : -dx/len;
+  const normY = fromTouch ? dy/len : -dy/len;
   ballVel.set(normX*power*0.22, Math.abs(normY)*power*0.14+power*0.15, -power*0.34);
   ballInFlight=true; gameState='throwing'; shotsLeft--; updateShotDots(); playSound('whoosh');
 }
@@ -800,6 +806,11 @@ function animate() {
   if (ballOnFire||deadBouncing) updateFireParticles(dt);
   renderer.render(scene3d,camera);
 }
+// Set throw hint based on device
+document.getElementById('throw-hint').textContent = isMobile
+  ? 'swipe in the direction you want to throw'
+  : 'click ball to grab · drag to aim · release to throw';
+
 // Mobile desk toggle
 const deskToggleBtn = document.getElementById('desk-toggle');
 const deskEl = document.getElementById('desk');
