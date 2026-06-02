@@ -125,8 +125,9 @@ document.getElementById('clear-btn').addEventListener('click', () => { drawCtx.c
 // ═══════════════════════════════════════════
 const container = document.getElementById('three-container');
 const renderer  = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-renderer.setPixelRatio(window.devicePixelRatio);
-renderer.shadowMap.enabled = true;
+const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+renderer.setPixelRatio(isMobile ? Math.min(window.devicePixelRatio, 1.5) : window.devicePixelRatio);
+renderer.shadowMap.enabled = !isMobile;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.setClearColor(0x1a1a1a);
 container.appendChild(renderer.domElement);
@@ -367,7 +368,8 @@ function getBallScreenPos() {
 function isCursorOnBall(clientX, clientY) {
   const sp=getBallScreenPos(); if (!sp) return false;
   const rect=container.getBoundingClientRect();
-  return Math.hypot(clientX-rect.left-sp.x, clientY-rect.top-sp.y)<36;
+  const hitRadius = isMobile ? 80 : 36; // much bigger on mobile
+  return Math.hypot(clientX-rect.left-sp.x, clientY-rect.top-sp.y) < hitRadius;
 }
 
 // ── THROW ──
@@ -434,7 +436,10 @@ let touchThrow=false, touchOrbit=false, touchOrbitLast={x:0,y:0};
 container.addEventListener('touchstart', e => {
   e.preventDefault(); if (gameState!=='idle'||!ballMesh) return;
   const t=e.changedTouches[0], rect=container.getBoundingClientRect();
-  if (isCursorOnBall(t.clientX,t.clientY)) {
+  // On mobile: always grab ball on touch (no precise hit test needed)
+  // On desktop-sized touch: use hit test
+  const grabBall = isMobile ? true : isCursorOnBall(t.clientX, t.clientY);
+  if (grabBall) {
     touchThrow=true; swipeActive=true;
     swipeStart={x:t.clientX-rect.left,y:t.clientY-rect.top}; swipeCurrent={...swipeStart};
     document.getElementById('throw-hint').style.opacity='0';
