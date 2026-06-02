@@ -386,17 +386,17 @@ function drawAimArrow() {
   arrowCtx.clearRect(0,0,arrowCanvas.width,arrowCanvas.height);
   if (!throwMode) return;
   const dx=swipeCurrent.x-swipeStart.x, dy=swipeCurrent.y-swipeStart.y, len=Math.hypot(dx,dy);
-  if (len<6||dy<0) return;
+  if (len<6) return; // removed dy<0 check — let any direction show arrow on touch
   const cx=swipeStart.x, cy=swipeStart.y, maxLen=110, drawLen=Math.min(len,maxLen), power=Math.min(len/maxLen,1);
   arrowCtx.beginPath(); arrowCtx.moveTo(cx,cy); arrowCtx.lineTo(cx+(dx/len)*drawLen,cy+(dy/len)*drawLen);
-  arrowCtx.strokeStyle=`rgba(212,90,30,${0.3+power*0.4})`; arrowCtx.lineWidth=2; arrowCtx.setLineDash([5,5]); arrowCtx.stroke(); arrowCtx.setLineDash([]);
+  arrowCtx.strokeStyle=`rgba(212,90,30,${0.3+power*0.4})`; arrowCtx.lineWidth=3; arrowCtx.setLineDash([5,5]); arrowCtx.stroke(); arrowCtx.setLineDash([]);
   const tx=cx-(dx/len)*drawLen*0.7, ty=cy-(dy/len)*drawLen*0.7, angle=Math.atan2(-dy,-dx);
   arrowCtx.beginPath(); arrowCtx.moveTo(tx,ty);
-  arrowCtx.lineTo(tx-Math.cos(angle-0.4)*13,ty-Math.sin(angle-0.4)*13);
-  arrowCtx.lineTo(tx-Math.cos(angle+0.4)*13,ty-Math.sin(angle+0.4)*13);
+  arrowCtx.lineTo(tx-Math.cos(angle-0.4)*14,ty-Math.sin(angle-0.4)*14);
+  arrowCtx.lineTo(tx-Math.cos(angle+0.4)*14,ty-Math.sin(angle+0.4)*14);
   arrowCtx.closePath(); arrowCtx.fillStyle=`rgba(212,90,30,${0.5+power*0.5})`; arrowCtx.fill();
-  arrowCtx.beginPath(); arrowCtx.arc(cx,cy,14,0,Math.PI*2*power);
-  arrowCtx.strokeStyle='rgba(212,90,30,0.7)'; arrowCtx.lineWidth=2.5; arrowCtx.stroke();
+  arrowCtx.beginPath(); arrowCtx.arc(cx,cy,18,0,Math.PI*2*power);
+  arrowCtx.strokeStyle='rgba(212,90,30,0.8)'; arrowCtx.lineWidth=3; arrowCtx.stroke();
 }
 
 container.addEventListener('mousedown', e => {
@@ -458,7 +458,7 @@ container.addEventListener('touchend', () => {
 function throwFromSwipe() {
   if (!ballMesh) return;
   const dx=swipeCurrent.x-swipeStart.x, dy=swipeCurrent.y-swipeStart.y, len=Math.hypot(dx,dy);
-  if (len<10||dy<0) { gameState='idle'; document.getElementById('throw-hint').style.opacity='1'; return; }
+  if (len<10) { gameState='idle'; document.getElementById('throw-hint').style.opacity='1'; return; }
   const power=Math.min(len/110,1), normX=-dx/len, normY=-dy/len;
   ballVel.set(normX*power*0.22, Math.abs(normY)*power*0.14+power*0.15, -power*0.34);
   ballInFlight=true; gameState='throwing'; shotsLeft--; updateShotDots(); playSound('whoosh');
@@ -795,7 +795,15 @@ function animate() {
   if (ballOnFire||deadBouncing) updateFireParticles(dt);
   renderer.render(scene3d,camera);
 }
-// On mobile, start with desk hidden so 3D view fills screen
-if (window.innerWidth <= 600) document.getElementById('desk').classList.add('hidden');
+// Mobile desk toggle
+const deskToggleBtn = document.getElementById('desk-toggle');
+const deskEl = document.getElementById('desk');
+deskToggleBtn.addEventListener('click', () => {
+  deskEl.classList.toggle('hidden');
+  // Resize arrow canvas after desk slides in/out - layout shifts
+  setTimeout(resizeArrow, 350);
+});
+// On mobile start with desk hidden
+if (window.innerWidth <= 600) deskEl.classList.add('hidden');
 
 animate();
